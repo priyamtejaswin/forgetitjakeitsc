@@ -1,4 +1,4 @@
-#include "my_adder.h"
+#include "my_adder.hpp"
 #include <iostream>
 
 MyAdder::MyAdder(const int val) {
