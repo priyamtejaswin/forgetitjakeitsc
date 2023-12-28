@@ -1,11 +1,7 @@
-#include <sentencepiece_processor.h>
 #include <iostream>
+#include "st5.h"
 
-int main(int argc, char* argv[]) {
-    sentencepiece::SentencePieceProcessor processor;
-    const auto status = processor.Load("./spm_char.model");
-    if (!status.ok()) {
-        // error
-        std::cerr << status.ToString() << std::endl;
-    }
+int main(int argc, char *argv[]) {
+    st5::Normalizer normalizer("nmt_nfkc");
+    return 0;
 }

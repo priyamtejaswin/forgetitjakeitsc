@@ -31,14 +31,16 @@ class Normalizer {
     ~Normalizer();
 
     private:
-    std::unique_ptr<std::string> rules;
-    std::unique_ptr<CharsMap> chars_map;
+    void GetPrecompiledCharsMap(
+        std::string_view name,
+        std::string *output
+    );
     void DecodePrecompiledCharsMap(
         std::string_view blob, 
         std::string_view *trie_blob,
         std::string_view *normalized
-        );
-    void DecompileCharsMap(std::string_view blob, CharsMap *chars_map);
+    );
+    // void DecompileCharsMap(std::string_vi, std::string_view blob, CharsMap *chars_map);
 };
 
 template <typename T>
