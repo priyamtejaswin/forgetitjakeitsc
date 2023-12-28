@@ -1,5 +1,4 @@
 #include "st5.h"
-#include "nmt_nfkc_rules.h"
 #include <string>
 #include <iostream>
 #include <array>
