@@ -1,4 +1,5 @@
 .vscode/
 *.model
 facade_example/*.bin
+facade_example/*.o
 *.bin
