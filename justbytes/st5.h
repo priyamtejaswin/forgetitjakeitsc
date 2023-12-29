@@ -52,30 +52,16 @@ class Normalizer {
 
 namespace string_util { // Contains utility funtion definitions.
 
-template <typename T>
-inline bool DecodePOD(std::string_view str, T *result) {
-    if (sizeof(*result) != str.size()) {
-        return false;
-    }
-    memcpy(result, str.data(), sizeof(T));
-    return true;
-}
+// Return (x & 0xC0) == 0x80;
+// Since trail bytes are always in [0x80, 0xBF], we can optimize:
+inline bool IsTrailByte(char x) { return static_cast<signed char>(x) < -0x40; }
 
-UnicodeText UTF8ToUnicodeText(std::string_view utf8) {
-    UnicodeText uc;
-    const char *begin = utf8.data();
-    const char *end = utf8.data() + utf8.size();
-    while (begin < end) {
-        size_t mblen;
-        const char32 c = DecodeUTF8(begin, end, &mblen);
-        uc.push_back(c);
-        begin += mblen;
-    }
-    return uc;
+inline bool IsValidCodepoint(char32 c) {
+  return (static_cast<uint32>(c) < 0xD800) || (c >= 0xE000 && c <= 0x10FFFF);
 }
 
 // mblen sotres the number of bytes consumed after decoding.
-char32 DecodeUTF8(const char *begin, const char *end, size_t *mblen) {
+inline char32 DecodeUTF8(const char *begin, const char *end, size_t *mblen) {
   const size_t len = end - begin;
 
   if (static_cast<unsigned char>(begin[0]) < 0x80) {
@@ -110,16 +96,21 @@ char32 DecodeUTF8(const char *begin, const char *end, size_t *mblen) {
   return kUnicodeError;
 }
 
-// Return (x & 0xC0) == 0x80;
-// Since trail bytes are always in [0x80, 0xBF], we can optimize:
-inline bool IsTrailByte(char x) { return static_cast<signed char>(x) < -0x40; }
-
-inline bool IsValidCodepoint(char32 c) {
-  return (static_cast<uint32>(c) < 0xD800) || (c >= 0xE000 && c <= 0x10FFFF);
+inline UnicodeText UTF8ToUnicodeText(std::string_view utf8) {
+    UnicodeText uc;
+    const char *begin = utf8.data();
+    const char *end = utf8.data() + utf8.size();
+    while (begin < end) {
+        size_t mblen;
+        const char32 c = DecodeUTF8(begin, end, &mblen);
+        uc.push_back(c);
+        begin += mblen;
+    }
+    return uc;
 }
 
 } // namespace string_util
 
 } // namespace st5
 
-#endif // ST5_H
+#endif // ST5_H_
