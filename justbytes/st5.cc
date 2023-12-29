@@ -12,7 +12,10 @@ Normalizer::Normalizer(std::string_view name) {
     GetPrecompiledCharsMap(name, &precompiled_chars_map);
 
     // Decompile to chars-map.
-    DecompileCharsMap(precompiled_chars_map, &chars_map);
+    CharsMap cmap;
+    DecompileCharsMap(precompiled_chars_map, &cmap);
+    std::cout << "Inside constructor. cmap size " << cmap.size() << std::endl;
+    chars_map = std::move(cmap);    
 }
 
 Normalizer::~Normalizer() {}
@@ -92,6 +95,8 @@ void Normalizer::DecompileCharsMap(
             key.pop_back();
         }
     };
+
+    traverse(0, 0);
 }
 
 } // namespace st5
