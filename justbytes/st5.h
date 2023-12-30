@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -32,7 +33,8 @@ class Normalizer {
     public:
     Normalizer(std::string_view name);
     ~Normalizer();
-    CharsMap chars_map;
+    std::string Normalize(std::string_view);
+    CharsMap chars_map; // Stores the char_map.
 
     private:
     void GetPrecompiledCharsMap(
@@ -48,9 +50,58 @@ class Normalizer {
         std::string_view blob,
         CharsMap *chars_map
     );
+    void Normalize(
+        std::string_view input,
+        std::string *normalized,
+        std::vector<size_t> *norm_to_orig
+    );
+    std::pair<std::string_view, int> NormalizePrefix(
+        std::string_view
+    ) const;
+
+    const PrefixMatcher *matcher_ = nullptr;
+
+    // Internal trie for efficient longest matching.
+    std::unique_ptr<Darts::DoubleArray> trie_;
+
+    static constexpr int kMaxTrieResultsSize = 32;
+
+    // "\0" delimitered output string.
+    // the value of |trie_| stores pointers to this string.
+    const char *normalized_ = nullptr;
+
+    // Split hello world into "hello_" and "world_" instead of
+    // "_hello" and "_world".
+    const bool treat_whitespace_as_suffix_ = false;
+};
+
+class PrefixMatcher {
+    public:
+    // Initializes the PrefixMatcher with `dic`.
+    explicit PrefixMatcher(const std::set<std::string_view> &dic);
+
+    // Finds the longest string in dic, which is a prefix of `w`.
+    // Returns the UTF8 byte length of matched string.
+    // `found` is set if a prefix match exists.
+    // If no entry is found, consumes one Unicode character.
+    int PrefixMatch(std::string_view w, bool *found = nullptr) const;
+
+    // Replaces entries in `w` with `out`.
+    std::string GlobalReplace(std::string_view w, std::string_view out) const;
+
+    private:
+    std::unique_ptr<Darts::DoubleArray> trie_;
 };
 
 namespace string_util { // Contains utility funtion definitions.
+
+inline bool EndsWith(std::string str, std::string_view expected) {
+    if (expected.length() > str.length()) return false;
+    else {
+        return str.compare(str.length() - expected.length(), 
+            expected.length(), expected) == 0;
+    }
+}
 
 // Return (x & 0xC0) == 0x80;
 // Since trail bytes are always in [0x80, 0xBF], we can optimize:
@@ -58,6 +109,15 @@ inline bool IsTrailByte(char x) { return static_cast<signed char>(x) < -0x40; }
 
 inline bool IsValidCodepoint(char32 c) {
   return (static_cast<uint32>(c) < 0xD800) || (c >= 0xE000 && c <= 0x10FFFF);
+}
+
+inline bool IsValidDecodeUTF8(std::string_view input, size_t *mblen) {
+  const char32 c = DecodeUTF8(input, mblen);
+  return c != kUnicodeError || *mblen == 3;
+}
+
+inline char32 DecodeUTF8(std::string_view input, size_t *mblen) {
+  return DecodeUTF8(input.data(), input.data() + input.size(), mblen);
 }
 
 // mblen sotres the number of bytes consumed after decoding.
@@ -107,6 +167,11 @@ inline UnicodeText UTF8ToUnicodeText(std::string_view utf8) {
         begin += mblen;
     }
     return uc;
+}
+
+// Return length of a single UTF-8 source character
+inline size_t OneCharLen(const char *src) {
+  return "\1\1\1\1\1\1\1\1\1\1\1\1\2\2\3\4"[(*src & 0xFF) >> 4];
 }
 
 } // namespace string_util
