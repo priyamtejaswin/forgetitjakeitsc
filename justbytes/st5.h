@@ -2,6 +2,7 @@
 #define ST5_H_
 
 #include "nmt_nfkc_rules.h"
+#include "darts.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -29,50 +30,12 @@ using CharsMap = std::map<Chars, Chars>;
 // Storing unicode text.
 using UnicodeText = std::vector<char32>;
 
-class Normalizer {
-    public:
-    Normalizer(std::string_view name);
-    ~Normalizer();
-    std::string Normalize(std::string_view);
-    CharsMap chars_map; // Stores the char_map.
-
-    private:
-    void GetPrecompiledCharsMap(
-        std::string_view name,
-        std::string *output
-    );
-    void DecodePrecompiledCharsMap(
-        std::string_view blob, 
-        std::string_view *trie_blob,
-        std::string_view *normalized
-    );
-    void DecompileCharsMap(
-        std::string_view blob,
-        CharsMap *chars_map
-    );
-    void Normalize(
-        std::string_view input,
-        std::string *normalized,
-        std::vector<size_t> *norm_to_orig
-    );
-    std::pair<std::string_view, int> NormalizePrefix(
-        std::string_view
-    ) const;
-
-    const PrefixMatcher *matcher_ = nullptr;
-
-    // Internal trie for efficient longest matching.
-    std::unique_ptr<Darts::DoubleArray> trie_;
-
-    static constexpr int kMaxTrieResultsSize = 32;
-
-    // "\0" delimitered output string.
-    // the value of |trie_| stores pointers to this string.
-    const char *normalized_ = nullptr;
-
-    // Split hello world into "hello_" and "world_" instead of
-    // "_hello" and "_world".
-    const bool treat_whitespace_as_suffix_ = false;
+struct NormalizerSpec {
+    std::string name;
+    std::string precompiled_charsmap;
+    bool add_dummy_prefix = true;
+    bool remove_extra_whitespaces = true;
+    bool escape_whitespaces = true;
 };
 
 class PrefixMatcher {
@@ -93,6 +56,56 @@ class PrefixMatcher {
     std::unique_ptr<Darts::DoubleArray> trie_;
 };
 
+class Normalizer {
+    public:
+    Normalizer(std::string_view name);
+    ~Normalizer();
+    std::string Normalize(std::string_view) const;
+    NormalizerSpec spec;
+
+    private:
+    void GetPrecompiledCharsMap(
+        std::string_view name,
+        std::string *output
+    );
+
+    void DecodePrecompiledCharsMap(
+        std::string_view blob, 
+        std::string_view *trie_blob,
+        std::string_view *normalized
+    );
+
+    void DecompileCharsMap(
+        std::string_view blob,
+        CharsMap *chars_map
+    );
+
+    void Normalize(
+        std::string_view input,
+        std::string *normalized,
+        std::vector<size_t> *norm_to_orig
+    ) const;
+
+    std::pair<std::string_view, int> NormalizePrefix(
+        std::string_view
+    ) const;
+
+    const PrefixMatcher *matcher_ = nullptr;
+
+    // Internal trie for efficient longest matching.
+    std::unique_ptr<Darts::DoubleArray> trie_;
+
+    static constexpr int kMaxTrieResultsSize = 32;
+
+    // "\0" delimitered output string.
+    // the value of |trie_| stores pointers to this string.
+    const char *normalized_ = nullptr;
+
+    // Split hello world into "hello_" and "world_" instead of
+    // "_hello" and "_world".
+    const bool treat_whitespace_as_suffix_ = false;
+};
+
 namespace string_util { // Contains utility funtion definitions.
 
 inline bool EndsWith(std::string str, std::string_view expected) {
@@ -109,15 +122,6 @@ inline bool IsTrailByte(char x) { return static_cast<signed char>(x) < -0x40; }
 
 inline bool IsValidCodepoint(char32 c) {
   return (static_cast<uint32>(c) < 0xD800) || (c >= 0xE000 && c <= 0x10FFFF);
-}
-
-inline bool IsValidDecodeUTF8(std::string_view input, size_t *mblen) {
-  const char32 c = DecodeUTF8(input, mblen);
-  return c != kUnicodeError || *mblen == 3;
-}
-
-inline char32 DecodeUTF8(std::string_view input, size_t *mblen) {
-  return DecodeUTF8(input.data(), input.data() + input.size(), mblen);
 }
 
 // mblen sotres the number of bytes consumed after decoding.
@@ -154,6 +158,15 @@ inline char32 DecodeUTF8(const char *begin, const char *end, size_t *mblen) {
   // Invalid UTF-8.
   *mblen = 1;
   return kUnicodeError;
+}
+
+inline char32 DecodeUTF8(std::string_view input, size_t *mblen) {
+  return DecodeUTF8(input.data(), input.data() + input.size(), mblen);
+}
+
+inline bool IsValidDecodeUTF8(std::string_view input, size_t *mblen) {
+  const char32 c = DecodeUTF8(input, mblen);
+  return c != kUnicodeError || *mblen == 3;
 }
 
 inline UnicodeText UTF8ToUnicodeText(std::string_view utf8) {
