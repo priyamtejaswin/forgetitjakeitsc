@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++11 -Wall
+CXXFLAGS := -std=c++14 -Wall -g
 TARGET := runme.bin
 
 # Will run by default.

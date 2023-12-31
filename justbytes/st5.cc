@@ -5,8 +5,13 @@
 
 namespace st5 {
 
-Normalizer::Normalizer(std::string_view name) {
-    spec.name = name;
+Normalizer::Normalizer(std::string_view name) : name_(name) {
+    Init();
+    std::cout << "outside init " << trie_ << std::endl;
+}
+
+void Normalizer::Init() {
+    spec.name = name_;
     GetPrecompiledCharsMap(spec.name, &spec.precompiled_charsmap);
     std::string_view index = spec.precompiled_charsmap;
 
@@ -14,15 +19,18 @@ Normalizer::Normalizer(std::string_view name) {
     DecodePrecompiledCharsMap(index, &trie_blob, &normalized);
 
     // Reads the body of double array.
-    // trie_ = absl::make_unique<Darts::DoubleArray>();
-    std::unique_ptr<Darts::DoubleArray> trie_(new Darts::DoubleArray());
+    trie_ = std::unique_ptr<Darts::DoubleArray>(new Darts::DoubleArray());
 
     // The second arg of set_array is not the size of blob,
     // but the number of double array units.
     trie_->set_array(const_cast<char *>(trie_blob.data()),
                      trie_blob.size() / trie_->unit_size());
 
+    std::cout << trie_->size() << std::endl;
+    
     normalized_ = normalized.data();
+
+    std::cout << "inside init " << trie_ << std::endl;
 }
 
 Normalizer::~Normalizer() {}
@@ -49,7 +57,6 @@ void Normalizer::Normalize(
     int consumed = 0;
 
     // Ignores heading space by default.
-    // TODO(priyam) make this a flag later.
     if (spec.remove_extra_whitespaces) {
         while (!input.empty()) {
             const auto p = NormalizePrefix(input);
@@ -96,10 +103,16 @@ void Normalizer::Normalize(
         auto p = NormalizePrefix(input);
         std::string_view _sp_temp = p.first;
         const char *ptr_ = _sp_temp.data();
+        std::cout << "*ptr|" << ptr_ << std::endl;
 
         // Removes heading spaces in sentence piece,
         // if the previous sentence piece ends with whitespace.
-        while (is_prev_space && *ptr_ == ' ') ++ptr_;
+        int size = _sp_temp.length();
+        while (is_prev_space && _sp_temp.front() == ' ') {
+            std::cout << "In the loop" << std::endl;
+            ++ptr_;
+            --size;
+        }
 
         std::string_view sp(ptr_);
 
@@ -235,11 +248,27 @@ void Normalizer::DecodePrecompiledCharsMap(
     ) {
     uint32 trie_blob_size = 0;
 
+    if (blob.size() <= sizeof(trie_blob_size) ||
+        !string_util::DecodePOD<uint32>(
+            std::string_view(blob.data(), sizeof(trie_blob_size)),
+            &trie_blob_size)) {
+        std::cout << "ERROR! Blob for normalization rule is broken." << std::endl;
+    }
+
+    if (trie_blob_size >= blob.size()) {
+        // return util::InternalError();
+        std::cout << "ERROR! Trie data size exceeds the input blob size" << std::endl;
+        return;
+    }
+
     blob.remove_prefix(sizeof(trie_blob_size));
+    std::cout << blob.size() << std::endl;
 
     *trie_blob = std::string_view(blob.data(), trie_blob_size);
 
     blob.remove_prefix(trie_blob_size);
+    std::cout << blob.size() << std::endl;
+
     *normalized = std::string_view(blob.data(), blob.size());
 }
 
@@ -299,7 +328,7 @@ PrefixMatcher::PrefixMatcher(const std::set<std::string_view> &dic) {
     std::vector<const char *> key;
     key.reserve(dic.size());
     for (const auto &it : dic) key.push_back(it.data());
-    std::unique_ptr<Darts::DoubleArray> trie_(new Darts::DoubleArray());
+    trie_ = std::unique_ptr<Darts::DoubleArray>(new Darts::DoubleArray());
     trie_->build(key.size(), const_cast<char **>(&key[0]), nullptr,
                             nullptr);
 }

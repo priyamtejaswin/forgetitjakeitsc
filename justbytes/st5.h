@@ -60,10 +60,24 @@ class Normalizer {
     public:
     Normalizer(std::string_view name);
     ~Normalizer();
+    std::string name_;
     std::string Normalize(std::string_view) const;
     NormalizerSpec spec;
 
+    // Internal trie for efficient longest matching.
+    std::unique_ptr<Darts::DoubleArray> trie_;
+
+    // "\0" delimitered output string.
+    // the value of |trie_| stores pointers to this string.
+    const char *normalized_ = nullptr;
+
+    std::pair<std::string_view, int> NormalizePrefix(
+        std::string_view
+    ) const;
+
     private:
+    void Init();
+
     void GetPrecompiledCharsMap(
         std::string_view name,
         std::string *output
@@ -86,20 +100,9 @@ class Normalizer {
         std::vector<size_t> *norm_to_orig
     ) const;
 
-    std::pair<std::string_view, int> NormalizePrefix(
-        std::string_view
-    ) const;
-
     const PrefixMatcher *matcher_ = nullptr;
 
-    // Internal trie for efficient longest matching.
-    std::unique_ptr<Darts::DoubleArray> trie_;
-
     static constexpr int kMaxTrieResultsSize = 32;
-
-    // "\0" delimitered output string.
-    // the value of |trie_| stores pointers to this string.
-    const char *normalized_ = nullptr;
 
     // Split hello world into "hello_" and "world_" instead of
     // "_hello" and "_world".
@@ -107,6 +110,15 @@ class Normalizer {
 };
 
 namespace string_util { // Contains utility funtion definitions.
+
+template <typename T>
+inline bool DecodePOD(std::string_view str, T *result) {
+  if (sizeof(*result) != str.size()) {
+    return false;
+  }
+  memcpy(result, str.data(), sizeof(T));
+  return true;
+}
 
 inline bool EndsWith(std::string str, std::string_view expected) {
     if (expected.length() > str.length()) return false;
