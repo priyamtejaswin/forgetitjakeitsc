@@ -33,9 +33,9 @@ using UnicodeText = std::vector<char32>;
 struct NormalizerSpec {
     std::string name;
     std::string precompiled_charsmap;
-    bool add_dummy_prefix = true;
+    bool add_dummy_prefix = false;
     bool remove_extra_whitespaces = true;
-    bool escape_whitespaces = true;
+    bool escape_whitespaces = false;
 };
 
 class PrefixMatcher {

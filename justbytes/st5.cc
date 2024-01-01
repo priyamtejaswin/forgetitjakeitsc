@@ -101,20 +101,23 @@ void Normalizer::Normalize(
     bool is_prev_space = spec.remove_extra_whitespaces;
     while (!input.empty()) {
         auto p = NormalizePrefix(input);
-        std::string_view _sp_temp = p.first;
-        const char *ptr_ = _sp_temp.data();
-        std::cout << "*ptr|" << ptr_ << std::endl;
+        // std::string_view _sp_temp = p.first;
+        // const char *ptr_ = _sp_temp.data();
+        std::string_view sp(p.first);
 
         // Removes heading spaces in sentence piece,
         // if the previous sentence piece ends with whitespace.
-        int size = _sp_temp.length();
-        while (is_prev_space && _sp_temp.front() == ' ') {
-            std::cout << "In the loop" << std::endl;
-            ++ptr_;
-            --size;
+        // int size = _sp_temp.length();
+        // while (is_prev_space && _sp_temp.front() == ' ') {
+        //     ++ptr_;
+        //     --size;
+        // }
+        while (is_prev_space && sp.front() == ' ' && sp.size() > 0) {
+            sp.remove_prefix(1);
         }
 
-        std::string_view sp(ptr_);
+        // std::string_view sp(ptr_, 1);
+        std::cout << "sp:" << sp << std::endl;
 
         if (!sp.empty()) {
             const char *data = sp.data();
@@ -136,7 +139,7 @@ void Normalizer::Normalize(
 
         consumed += p.second;
         input.remove_prefix(p.second);
-        if (spec.remove_extra_whitespaces) {
+        if (!spec.remove_extra_whitespaces) {
             is_prev_space = false;
         }
     }
