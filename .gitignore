@@ -5,4 +5,4 @@ facade_example/*.o
 *.bin
 justbytes/.vscode/
 justbytes/*.o
-
+*dSYM/
