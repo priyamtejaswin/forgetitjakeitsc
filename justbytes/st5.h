@@ -35,7 +35,7 @@ struct NormalizerSpec {
     std::string precompiled_charsmap;
     bool add_dummy_prefix = true;
     bool remove_extra_whitespaces = true;
-    bool escape_whitespaces = false;
+    bool escape_whitespaces = true;
 };
 
 class PrefixMatcher {

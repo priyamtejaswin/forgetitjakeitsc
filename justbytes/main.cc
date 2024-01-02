@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]) {
     st5::Normalizer normalizer("nmt_nfkc");
-    std::string test_str = "   ①②③     ABC";
+    std::string test_str = "   ①②③     ABC   ";
     std::cout << "Input:" << test_str << std::endl;
 
     auto nmd = normalizer.Normalize(test_str);
