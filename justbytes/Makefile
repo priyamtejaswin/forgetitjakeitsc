@@ -1,31 +1,48 @@
 CXX := g++
 CXXFLAGS := -std=c++11 -Wall
 TARGET := runme.bin
-# Linking flags
+TESTER := testme.bin
 LDFLAGS := -lpthread
+INCLUDES := -I .
 
-# Tests
-TEST_DIR := tests
-TEST_FILES := $(wildcard $(TEST_DIR)/*.cc)
-TEST_OBJ_FILES := $(patsubst $(TEST_DIR)/%.cc, $(TEST_DIR)/%.o, $(TEST_FILES))
+BUILD_DIR := build
 
-# Will run by default.
-$(TARGET): st5.o main.o
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $^ $(LDFLAGS)
+TEST_FILES := $(shell find .  -name 'test_*.cc')
+TEST_OBJ_FILES := $(patsubst %.cc, $(BUILD_DIR)/%.o, $(TEST_FILES))
 
-st5.o: st5.cc st5.h nmt_nfkc_rules.h
-	$(CXX) $(CXXFLAGS) -c -o st5.o st5.cc
+# Src
+SRC_FILES := st5.cc main.cc
+SRC_OBJ_FILES := $(patsubst %.cc, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
-main.o: main.cc st5.h
-	$(CXX) $(CXXFLAGS) -c -o main.o main.cc
+# $(info SRC_FILES is $(SRC_FILES))
+# $(info SRC_OBJ_FILES is $(SRC_OBJ_FILES))
 
-$(TEST_DIR)/%.o: $(TEST_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -I ./ -c $< -o $@
+target: $(BUILD_DIR) $(TARGET)
 
-test: $(TEST_OBJ_FILES)
-	$(CXX) $(CXXFLAGS) $^ -o $(TEST_DIR)/test_runner $(LDFLAGS)
-	./$(TEST_DIR)/test_runner
+$(TARGET): $(SRC_OBJ_FILES)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@
 
-# Won't run unless called, because it's not the first.
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(SRC_OBJ_FILES): $(wildcard $(INCLUDES)/*.h)
+
+$(BUILD_DIR)/%.o: %.cc
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Test
+test: $(BUILD_DIR) $(TESTER)
+
+$(TESTER): $(TEST_OBJ_FILES) $(BUILD_DIR)/st5.o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@
+	./$(TESTER)
+
+$(TEST_OBJ_FILES): $(wildcard $(INCLUDES)/*.h)
+
+$(BUILD_DIR)/%.o: test_%.cc
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Clean
 clean:
-	rm -rf *.o $(TARGET) $(TEST_DIR)/*.o $(TEST_DIR)/test_runner
+	rm -rf $(BUILD_DIR)
+	rm -rf *.bin

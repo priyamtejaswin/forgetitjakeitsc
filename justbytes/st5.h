@@ -33,7 +33,7 @@ using UnicodeText = std::vector<char32>;
 struct NormalizerSpec {
     std::string name;
     std::string precompiled_charsmap;
-    bool add_dummy_prefix = false;
+    bool add_dummy_prefix = true;
     bool remove_extra_whitespaces = true;
     bool escape_whitespaces = false;
 };
@@ -63,17 +63,6 @@ class Normalizer {
     std::string name_;
     std::string Normalize(std::string_view) const;
     NormalizerSpec spec;
-
-    // Internal trie for efficient longest matching.
-    std::unique_ptr<Darts::DoubleArray> trie_;
-
-    // "\0" delimitered output string.
-    // the value of |trie_| stores pointers to this string.
-    const char *normalized_ = nullptr;
-
-    std::pair<std::string_view, int> NormalizePrefix(
-        std::string_view
-    ) const;
 
     private:
     void Init();
@@ -107,6 +96,17 @@ class Normalizer {
     // Split hello world into "hello_" and "world_" instead of
     // "_hello" and "_world".
     const bool treat_whitespace_as_suffix_ = false;
+
+    // Internal trie for efficient longest matching.
+    std::unique_ptr<Darts::DoubleArray> trie_;
+
+    // "\0" delimitered output string.
+    // the value of |trie_| stores pointers to this string.
+    const char *normalized_ = nullptr;
+
+    std::pair<std::string_view, int> NormalizePrefix(
+        std::string_view
+    ) const;
 };
 
 namespace string_util { // Contains utility funtion definitions.

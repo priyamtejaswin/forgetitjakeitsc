@@ -7,4 +7,6 @@ justbytes/.vscode/
 justbytes/*.o
 justbytes/tests/*.o
 justbytes/tests/test_runner
+justbytes/build/
+justbytes/sv.cc
 *dSYM/
