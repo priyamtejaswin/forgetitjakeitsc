@@ -9,7 +9,8 @@
 #define RC "\xEF\xBF\xBD"
 
 TEST_CASE("Normalize") {
-    st5::Normalizer normalizer("nmt_nfkc");
+    st5::NormalizerSpec default_spec;
+    st5::Normalizer normalizer(default_spec);
 
     // Empty strings.
     CHECK_EQ("", normalizer.Normalize(""));

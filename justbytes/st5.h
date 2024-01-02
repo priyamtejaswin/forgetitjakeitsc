@@ -31,8 +31,8 @@ using CharsMap = std::map<Chars, Chars>;
 using UnicodeText = std::vector<char32>;
 
 struct NormalizerSpec {
-    std::string name;
-    std::string precompiled_charsmap;
+    std::string name = "nmt_nfkc";
+    mutable std::string precompiled_charsmap;
     bool add_dummy_prefix = true;
     bool remove_extra_whitespaces = true;
     bool escape_whitespaces = true;
@@ -58,12 +58,10 @@ class PrefixMatcher {
 
 class Normalizer {
     public:
-    Normalizer(std::string_view name);
+    Normalizer(const NormalizerSpec &spec);
     ~Normalizer();
-    std::string name_;
     std::string Normalize(std::string_view) const;
-    NormalizerSpec spec;
-
+    
     private:
     void Init();
 
@@ -89,9 +87,13 @@ class Normalizer {
         std::vector<size_t> *norm_to_orig
     ) const;
 
-    const PrefixMatcher *matcher_ = nullptr;
+    std::pair<std::string_view, int> NormalizePrefix(
+        std::string_view
+    ) const;
 
-    static constexpr int kMaxTrieResultsSize = 32;
+    const NormalizerSpec *spec_;
+
+    const PrefixMatcher *matcher_ = nullptr;
 
     // Split hello world into "hello_" and "world_" instead of
     // "_hello" and "_world".
@@ -104,9 +106,7 @@ class Normalizer {
     // the value of |trie_| stores pointers to this string.
     const char *normalized_ = nullptr;
 
-    std::pair<std::string_view, int> NormalizePrefix(
-        std::string_view
-    ) const;
+    static constexpr int kMaxTrieResultsSize = 32;
 };
 
 namespace string_util { // Contains utility funtion definitions.

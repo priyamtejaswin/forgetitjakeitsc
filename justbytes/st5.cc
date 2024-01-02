@@ -5,15 +5,13 @@
 
 namespace st5 {
 
-Normalizer::Normalizer(std::string_view name) : name_(name) {
+Normalizer::Normalizer(const NormalizerSpec &spec) : spec_(&spec) {
     Init();
-    std::cout << "outside init " << trie_ << std::endl;
 }
 
 void Normalizer::Init() {
-    spec.name = name_;
-    GetPrecompiledCharsMap(spec.name, &spec.precompiled_charsmap);
-    std::string_view index = spec.precompiled_charsmap;
+    GetPrecompiledCharsMap(spec_->name, &spec_->precompiled_charsmap);
+    std::string_view index = spec_->precompiled_charsmap;
 
     std::string_view trie_blob, normalized;
     DecodePrecompiledCharsMap(index, &trie_blob, &normalized);
@@ -25,12 +23,8 @@ void Normalizer::Init() {
     // but the number of double array units.
     trie_->set_array(const_cast<char *>(trie_blob.data()),
                      trie_blob.size() / trie_->unit_size());
-
-    std::cout << trie_->size() << std::endl;
     
     normalized_ = normalized.data();
-
-    std::cout << "inside init " << trie_ << std::endl;
 }
 
 Normalizer::~Normalizer() {}
@@ -57,7 +51,7 @@ void Normalizer::Normalize(
     int consumed = 0;
 
     // Ignores heading space by default.
-    if (spec.remove_extra_whitespaces) {
+    if (spec_->remove_extra_whitespaces) {
         while (!input.empty()) {
             const auto p = NormalizePrefix(input);
             if (p.first != " ") {
@@ -81,7 +75,7 @@ void Normalizer::Normalize(
 
     // adds kSpaceSymbol to the current context.
     auto add_ws = [this, &consumed, &normalized, &norm_to_orig, &kSpaceSymbol]() {
-        if (spec.escape_whitespaces) {
+        if (spec_->escape_whitespaces) {
             normalized->append(kSpaceSymbol.data(), kSpaceSymbol.size());
             for (size_t n = 0; n < kSpaceSymbol.size(); ++n) {
                 norm_to_orig->push_back(consumed);
@@ -96,9 +90,9 @@ void Normalizer::Normalize(
     // With this prefix, "world" and "hello world" are converted into
     // "_world" and "_hello_world", which help the trainer to extract
     // "_world" as one symbol.
-    if (!treat_whitespace_as_suffix_ && spec.add_dummy_prefix) add_ws();
+    if (!treat_whitespace_as_suffix_ && spec_->add_dummy_prefix) add_ws();
 
-    bool is_prev_space = spec.remove_extra_whitespaces;
+    bool is_prev_space = spec_->remove_extra_whitespaces;
     while (!input.empty()) {
         auto p = NormalizePrefix(input);
         std::string_view sp(p.first);
@@ -107,13 +101,10 @@ void Normalizer::Normalize(
             sp.remove_prefix(1);
         }
 
-        // std::string_view sp(ptr_, 1);
-        std::cout << "sp:" << sp << std::endl;
-
         if (!sp.empty()) {
             const char *data = sp.data();
             for (size_t n = 0; n < sp.size(); ++n) {
-                if (spec.escape_whitespaces && data[n] == ' ') {
+                if (spec_->escape_whitespaces && data[n] == ' ') {
                     // replace ' ' with kSpaceSymbol.
                     normalized->append(kSpaceSymbol.data(), kSpaceSymbol.size());
                     for (size_t m = 0; m < kSpaceSymbol.size(); ++m) {
@@ -130,15 +121,15 @@ void Normalizer::Normalize(
 
         consumed += p.second;
         input.remove_prefix(p.second);
-        if (!spec.remove_extra_whitespaces) {
+        if (!spec_->remove_extra_whitespaces) {
             is_prev_space = false;
         }
     }
 
     // Ignores tailing space.
-    if (spec.remove_extra_whitespaces) {
+    if (spec_->remove_extra_whitespaces) {
         const std::string_view space = 
-            spec.escape_whitespaces ? kSpaceSymbol : " ";
+            spec_->escape_whitespaces ? kSpaceSymbol : " ";
         while (string_util::EndsWith(*normalized, space)) {
             const int length = normalized->size() - space.size();
             // CHECK_GE_OR_RETURN(length, 0);
@@ -150,7 +141,7 @@ void Normalizer::Normalize(
     }
 
     // Adds a space symbol as a suffix (default is false)
-    if (treat_whitespace_as_suffix_ && spec.add_dummy_prefix) add_ws();
+    if (treat_whitespace_as_suffix_ && spec_->add_dummy_prefix) add_ws();
 
     norm_to_orig->push_back(consumed);
 
@@ -256,12 +247,10 @@ void Normalizer::DecodePrecompiledCharsMap(
     }
 
     blob.remove_prefix(sizeof(trie_blob_size));
-    std::cout << blob.size() << std::endl;
 
     *trie_blob = std::string_view(blob.data(), trie_blob_size);
 
     blob.remove_prefix(trie_blob_size);
-    std::cout << blob.size() << std::endl;
 
     *normalized = std::string_view(blob.data(), blob.size());
 }
